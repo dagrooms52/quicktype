@@ -18,6 +18,7 @@ import { OptionDefinition } from "./RendererOptions";
 import { TargetLanguage } from "./TargetLanguage";
 import { SerializedRenderResult, Annotation } from "./Source";
 import { IssueAnnotationData } from "./Annotation";
+import { readGraphQLSchema } from "./GraphQL";
 
 const makeSource = require("stream-json");
 const Assembler = require("stream-json/utils/Assembler");
@@ -72,6 +73,12 @@ const optionDefinitions: OptionDefinition[] = [
         type: String,
         typeLabel: "FILE",
         description: "Tracery grammar describing URLs to crawl."
+    },
+    {
+        name: "graphql",
+        type: String,
+        typeLabel: "FILE",
+        description: "GraphQL introspection file."
     },
     {
         name: "no-maps",
@@ -173,6 +180,7 @@ export interface Options {
     topLevel?: string;
     srcLang?: string;
     srcUrls?: string;
+    graphql?: string;
     out?: string;
     noMaps?: boolean;
     help?: boolean;
@@ -186,6 +194,7 @@ interface CompleteOptions {
     topLevel: string;
     srcLang: string;
     srcUrls?: string;
+    graphql?: string;
     out?: string;
     noMaps: boolean;
     help: boolean;
@@ -434,6 +443,9 @@ class Run {
             let json = JSON.parse(fs.readFileSync(this.options.srcUrls, "utf8"));
             let jsonMap = fromRight(Main.urlsFromJsonGrammar(json));
             this.render(await this.mapValues(jsonMap, this.parseFileOrUrlArray));
+        } else if (this.options.graphql) {
+            let json = JSON.parse(fs.readFileSync(this.options.graphql, "utf8"));
+            readGraphQLSchema(json);
         } else if (this.options.src.length === 0) {
             let samples: SampleOrSchemaMap = {};
             samples[this.options.topLevel] = [await this.parseJsonFromStream(process.stdin)];
