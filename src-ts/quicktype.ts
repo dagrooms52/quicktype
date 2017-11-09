@@ -75,10 +75,16 @@ const optionDefinitions: OptionDefinition[] = [
         description: "Tracery grammar describing URLs to crawl."
     },
     {
-        name: "graphql",
+        name: "graphql-schema",
         type: String,
         typeLabel: "FILE",
         description: "GraphQL introspection file."
+    },
+    {
+        name: "graphql-query",
+        type: String,
+        typeLabel: "FILE",
+        description: "GraphQL query file."
     },
     {
         name: "no-maps",
@@ -180,7 +186,8 @@ export interface Options {
     topLevel?: string;
     srcLang?: string;
     srcUrls?: string;
-    graphql?: string;
+    graphqlSchema?: string;
+    graphqlQuery?: string;
     out?: string;
     noMaps?: boolean;
     help?: boolean;
@@ -194,7 +201,8 @@ interface CompleteOptions {
     topLevel: string;
     srcLang: string;
     srcUrls?: string;
-    graphql?: string;
+    graphqlSchema?: string;
+    graphqlQuery?: string;
     out?: string;
     noMaps: boolean;
     help: boolean;
@@ -443,9 +451,14 @@ class Run {
             let json = JSON.parse(fs.readFileSync(this.options.srcUrls, "utf8"));
             let jsonMap = fromRight(Main.urlsFromJsonGrammar(json));
             this.render(await this.mapValues(jsonMap, this.parseFileOrUrlArray));
-        } else if (this.options.graphql) {
-            let json = JSON.parse(fs.readFileSync(this.options.graphql, "utf8"));
-            readGraphQLSchema(json);
+        } else if (this.options.graphqlSchema) {
+            if (!this.options.graphqlQuery) {
+                console.error("Please specify a GraphQL query with --graphql-query.");
+                return process.exit(1);
+            }
+            let json = JSON.parse(fs.readFileSync(this.options.graphqlSchema, "utf8"));
+            let query = fs.readFileSync(this.options.graphqlQuery, "utf8");
+            readGraphQLSchema(json, query);
         } else if (this.options.src.length === 0) {
             let samples: SampleOrSchemaMap = {};
             samples[this.options.topLevel] = [await this.parseJsonFromStream(process.stdin)];
