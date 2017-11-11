@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env ts-node -O {"target":"es6"}
 
 import * as shell from "shelljs";
 import * as fs from "fs";
@@ -10,7 +10,7 @@ const OUTDIR = "dist";
 function mapFile(
   source: string,
   destination: string,
-  transform: (string) => string
+  transform: (content: string) => string
 ) {
   const content = fs.readFileSync(source, "utf8");
   fs.writeFileSync(destination, transform(content));
@@ -46,10 +46,13 @@ function moveTypeScriptTypingsNextToPureScriptOutput() {
       //   import * as Maybe from "../Data.Maybe";
       //
       // This is required as PureScript compiler outputs a flat module heirarchy
-      return content.replace(/from \"\.+\/(.+)";/gm, (match, path) => {
-        const module = path.replace(/\//g, ".");
-        return `from "../${module}";`;
-      });
+      return content.replace(
+        /from \"\.+\/(.+)";/gm,
+        (match, originalModule) => {
+          const newModule = originalModule.replace(/\//g, ".");
+          return `from "../${newModule}";`;
+        }
+      );
     });
   }
 }
@@ -74,14 +77,14 @@ function rewritePureScriptModuleRequiresInTypeScriptBuildOutputThenMoveTypeScrip
     .filter(isDirectory)
     .map(name => path.basename(name));
 
-  const sources = shell
+  const sources: string[] = shell
     .find("src-ts")
     .filter(f => f.endsWith(".d.ts") || f.endsWith(".js"));
 
   for (const source of sources) {
     mapFile(source, source, content => {
       const depth = source.split("/").length - 2;
-      const rel = depth == 0 ? "." : path.join(_.repeat("..", depth));
+      const rel = depth === 0 ? "." : path.join(_.repeat("..", depth));
 
       return content
         .replace(/require\(\"(.+)\"\);/gm, (original, module) => {
@@ -102,7 +105,14 @@ function rewritePureScriptModuleRequiresInTypeScriptBuildOutputThenMoveTypeScrip
 
     const dest = source.replace("src-ts", OUTDIR);
     shell.mkdir("-p", path.dirname(dest));
-    shell.mv(source, dest);
+    if (
+      source.endsWith(".d.ts") &&
+      !fs.existsSync(source.replace(/\.d\.ts$/, ".ts"))
+    ) {
+      shell.cp(source, dest);
+    } else {
+      shell.mv(source, dest);
+    }
   }
 }
 
