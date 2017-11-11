@@ -4,7 +4,7 @@ import { List } from "immutable";
 
 import * as Either from "Data.Either";
 
-import { Config } from "Config";
+import { Config, TopLevelConfig, GraphQLTopLevelConfig } from "Config";
 import * as Main from "Main";
 import { Renderer } from "Doc";
 import * as Options from "Options";
@@ -14,6 +14,7 @@ import { RenderResult } from "./Renderer";
 import { OptionDefinition } from "./RendererOptions";
 import { glueGraphToNative } from "./Glue";
 import { serializeRenderResult, SerializedRenderResult } from "./Source";
+import { readGraphQLSchema } from "./GraphQL";
 
 export abstract class TargetLanguage {
     constructor(
@@ -28,12 +29,26 @@ export abstract class TargetLanguage {
 
 export abstract class TypeScriptTargetLanguage extends TargetLanguage {
     transformAndRenderConfig(config: Config): SerializedRenderResult {
+        let pureScriptTopLevels: TopLevelConfig[] = [];
+        let graphQLTopLevels: GraphQLTopLevelConfig[] = [];
+        for (const tl of config.topLevels) {
+            if (tl.hasOwnProperty("graphQLSchema")) {
+                graphQLTopLevels.push(tl as GraphQLTopLevelConfig);
+            } else {
+                pureScriptTopLevels.push(tl);
+            }
+        }
+        config.topLevels = pureScriptTopLevels;
+
         const glueGraphOrError = Main.glueGraphFromJsonConfig(config);
         if (Either.isLeft(glueGraphOrError)) {
             throw `Error processing JSON: ${fromLeft(glueGraphOrError)}`;
         }
         const glueGraph = fromRight(glueGraphOrError);
-        const graph = glueGraphToNative(glueGraph);
+        let graph = glueGraphToNative(glueGraph);
+        for (const tl of graphQLTopLevels) {
+            graph = graph.set(tl.name, readGraphQLSchema(tl.graphQLSchema, tl.graphQLDocument));
+        }
         const renderResult = this.renderGraph(graph, config.rendererOptions);
         return serializeRenderResult(renderResult, this.indentation);
     }

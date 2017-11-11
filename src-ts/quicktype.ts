@@ -10,7 +10,7 @@ import { fromRight } from "./purescript";
 import * as _ from "lodash";
 
 import * as Main from "Main";
-import { Config } from "Config";
+import { Config, TopLevelConfig } from "Config";
 import * as Renderers from "Language.Renderers";
 import { ErrorMessage, SourceCode } from "Core";
 import * as targetLanguages from "./Language/All";
@@ -247,20 +247,12 @@ class Run {
         return getTargetLanguage(opts.lang).optionDefinitions;
     };
 
-    renderSamplesOrSchemas = (samplesOrSchemas: SampleOrSchemaMap): SerializedRenderResult => {
-        const areSchemas = this.options.srcLang === "schema";
+    renderTopLevels = (topLevels: TopLevelConfig[]): SerializedRenderResult => {
         const targetLanguage = getTargetLanguage(this.options.lang);
 
         let config: Config = {
             language: targetLanguage.names[0],
-            topLevels: Object.getOwnPropertyNames(samplesOrSchemas).map(name => {
-                if (areSchemas) {
-                    // Only one schema per top-level is used right now
-                    return { name, schema: samplesOrSchemas[name][0] };
-                } else {
-                    return { name, samples: samplesOrSchemas[name] };
-                }
-            }),
+            topLevels,
             inferMaps: !this.options.noMaps,
             rendererOptions: this.options.rendererOptions
         };
@@ -271,6 +263,19 @@ class Run {
             console.error(e);
             return process.exit(1);
         }
+    };
+
+    renderSamplesOrSchemas = (samplesOrSchemas: SampleOrSchemaMap): SerializedRenderResult => {
+        const areSchemas = this.options.srcLang === "schema";
+        const topLevels = Object.getOwnPropertyNames(samplesOrSchemas).map(name => {
+            if (areSchemas) {
+                // Only one schema per top-level is used right now
+                return { name, schema: samplesOrSchemas[name][0] };
+            } else {
+                return { name, samples: samplesOrSchemas[name] };
+            }
+        });
+        return this.renderTopLevels(topLevels);
     };
 
     splitAndWriteJava = (dir: string, str: string) => {
@@ -303,8 +308,7 @@ class Run {
         writeFile();
     };
 
-    render = (samplesOrSchemas: SampleOrSchemaMap) => {
-        const { lines, annotations } = this.renderSamplesOrSchemas(samplesOrSchemas);
+    produceOutput = ({ lines, annotations }: SerializedRenderResult): void => {
         const output = lines.join("\n");
         if (this.options.out) {
             if (this.options.lang === "java") {
@@ -326,6 +330,10 @@ class Run {
             console.error(`\nIssue in line ${humanLineNumber}: ${annotation.message}`);
             console.error(`${humanLineNumber}: ${lines[lineNumber]}`);
         });
+    };
+
+    render = (samplesOrSchemas: SampleOrSchemaMap) => {
+        this.produceOutput(this.renderSamplesOrSchemas(samplesOrSchemas));
     };
 
     parseJsonFromStream = (stream: fs.ReadStream | NodeJS.Socket): Promise<object> => {
@@ -458,7 +466,12 @@ class Run {
             }
             let json = JSON.parse(fs.readFileSync(this.options.graphqlSchema, "utf8"));
             let query = fs.readFileSync(this.options.graphqlQuery, "utf8");
-            readGraphQLSchema(json, query);
+            const topLevel = {
+                name: this.options.topLevel,
+                graphQLSchema: json,
+                graphQLDocument: query
+            };
+            this.produceOutput(this.renderTopLevels([topLevel]));
         } else if (this.options.src.length === 0) {
             let samples: SampleOrSchemaMap = {};
             samples[this.options.topLevel] = [await this.parseJsonFromStream(process.stdin)];
