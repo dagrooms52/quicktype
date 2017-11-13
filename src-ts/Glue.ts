@@ -1,21 +1,11 @@
 "use strict";
 
 import { OrderedSet, Map, Set } from "immutable";
-import {
-    Type,
-    PrimitiveType,
-    ClassType,
-    ArrayType,
-    MapType,
-    EnumType,
-    UnionType,
-    TypeNames,
-    TopLevels
-} from "./Type";
+import { Type, PrimitiveType, ClassType, ArrayType, MapType, EnumType, UnionType, TypeNames, TopLevels } from "./Type";
 import { GlueClassEntry, GlueGraph, GlueType, GlueTypeNames } from "Reykjavik";
 
 function glueTypeNamesToNative({ names, combined }: GlueTypeNames): TypeNames {
-    return { names: Set(names), combined };
+    return { names: Set(names), combined, alternatives: OrderedSet() };
 }
 
 function glueTypeToNative(type: GlueType, classes: (Type | null)[]): Type {

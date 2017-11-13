@@ -115,8 +115,8 @@ export abstract class ConvenienceRenderer extends Renderer {
     private addNamedForNamedType = (type: NamedType): Name => {
         const existing = this._namesForNamedTypes.get(type);
         if (existing !== undefined) return existing;
-        const name = type.names.combined;
-        const named = this.globalNamespace.add(new SimpleName(name, this.namedTypeNamer));
+        const proposals = OrderedSet([type.names.combined]).union(type.names.alternatives);
+        const named = this.globalNamespace.add(new SimpleName(proposals, this.namedTypeNamer));
 
         const dependencyNames = this.namedTypeDependencyNames(type, named);
         for (const dn of dependencyNames) {
@@ -132,7 +132,17 @@ export abstract class ConvenienceRenderer extends Renderer {
         const ns = new Namespace(c.names.combined, this.globalNamespace, Set(forbiddenNamespace), Set(forbiddenNames));
         const names = c.properties
             .map((t: Type, name: string) => {
-                return ns.add(new SimpleName(name, this.propertyNamer));
+                // FIXME: This alternative should really depend on what the
+                // actual name of the class ends up being.  We can do this
+                // with a DependencyName.
+                // Also, we currently don't have any languages where properties
+                // are global, so collisions here could only occur where two
+                // properties of the same class have the same name, in which case
+                // the alternative would also be the same, i.e. useless.  But
+                // maybe we'll need global properties for some weird language at
+                // some point.
+                const alternative = `${c.names.combined}_${name}`;
+                return ns.add(new SimpleName(OrderedSet([name, alternative]), this.propertyNamer));
             })
             .toMap();
         this._propertyNames = this._propertyNames.set(c, names);
@@ -149,7 +159,10 @@ export abstract class ConvenienceRenderer extends Renderer {
         }
         let names = Map<string, Name>();
         e.cases.forEach((name: string) => {
-            names = names.set(name, ns.add(new SimpleName(name, this.caseNamer)));
+            // FIXME: See the FIXME in `addPropertyNameds`.  We do have global
+            // enum cases, though (in Go), so this is actually useful already.
+            const alternative = `${e.names.combined}_${name}`;
+            names = names.set(name, ns.add(new SimpleName(OrderedSet([name, alternative]), this.caseNamer)));
         });
         this._caseNames = this._caseNames.set(e, names);
     };

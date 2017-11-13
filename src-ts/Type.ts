@@ -9,6 +9,7 @@ export type TypeNames = {
     names: Set<string>;
     // FIXME: this is here until we have combineNames in TypeScript.
     combined: string;
+    alternatives: OrderedSet<string>;
 };
 
 // FIXME: OrderedMap?  We lose the order in PureScript right now, though,
@@ -27,9 +28,7 @@ export abstract class Type {
     directlyReachableTypes<T>(setForType: (t: Type) => OrderedSet<T> | null): OrderedSet<T> {
         const set = setForType(this);
         if (set) return set;
-        return orderedSetUnion(
-            this.children.map((t: Type) => t.directlyReachableTypes(setForType))
-        );
+        return orderedSetUnion(this.children.map((t: Type) => t.directlyReachableTypes(setForType)));
     }
 
     abstract equals(other: any): boolean;
@@ -141,15 +140,11 @@ export class ClassType extends NamedType {
 
     equals(other: any): boolean {
         if (!(other instanceof ClassType)) return false;
-        return (
-            this.names.names.equals(other.names.names) && this.properties.equals(other.properties)
-        );
+        return this.names.names.equals(other.names.names) && this.properties.equals(other.properties);
     }
 
     hashCode(): number {
-        return (
-            (stringHash(this.kind) + this.names.names.hashCode() + this.properties.hashCode()) | 0
-        );
+        return (stringHash(this.kind) + this.names.names.hashCode() + this.properties.hashCode()) | 0;
     }
 }
 
@@ -250,11 +245,7 @@ export function allNamedTypes(
     graph: TopLevels,
     childrenOfType?: (t: Type) => Collection<any, Type>
 ): OrderedSet<NamedType> {
-    return filterTypes<NamedType>(
-        (t: Type): t is NamedType => t.isNamedType(),
-        graph,
-        childrenOfType
-    );
+    return filterTypes<NamedType>((t: Type): t is NamedType => t.isNamedType(), graph, childrenOfType);
 }
 
 export type SeparatedNamedTypes = {
@@ -264,15 +255,9 @@ export type SeparatedNamedTypes = {
 };
 
 export function separateNamedTypes(types: Collection<any, NamedType>): SeparatedNamedTypes {
-    const classes = types
-        .filter((t: NamedType) => t instanceof ClassType)
-        .toOrderedSet() as OrderedSet<ClassType>;
-    const enums = types
-        .filter((t: NamedType) => t instanceof EnumType)
-        .toOrderedSet() as OrderedSet<EnumType>;
-    const unions = types
-        .filter((t: NamedType) => t instanceof UnionType)
-        .toOrderedSet() as OrderedSet<UnionType>;
+    const classes = types.filter((t: NamedType) => t instanceof ClassType).toOrderedSet() as OrderedSet<ClassType>;
+    const enums = types.filter((t: NamedType) => t instanceof EnumType).toOrderedSet() as OrderedSet<EnumType>;
+    const unions = types.filter((t: NamedType) => t instanceof UnionType).toOrderedSet() as OrderedSet<UnionType>;
 
     return { classes, enums, unions };
 }
