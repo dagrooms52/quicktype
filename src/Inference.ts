@@ -6,7 +6,7 @@ import * as pluralize from "pluralize";
 import { Value, Tag, valueTag, CompressedJSON } from "./CompressedJSON";
 import { Type, PrimitiveType, EnumType, MapType, ArrayType, ClassType, UnionType, makeNullable } from "./Type";
 import { assertNever, assert } from "./Support";
-import { TypeBuilder, UnionBuilder } from "./TypeBuilder";
+import { TypeGraph, UnionBuilder } from "./TypeBuilder";
 
 const MIN_LENGTH_FOR_ENUM = 10;
 
@@ -18,7 +18,7 @@ function concatArrays<T>(arrays: T[][]): T[] {
 
 class InferenceUnionBuilder extends UnionBuilder<Value[], Value[], any> {
     constructor(
-        typeBuilder: TypeBuilder,
+        typeBuilder: TypeGraph,
         typeName: string,
         private readonly _typeInference: TypeInference,
         private readonly _cjson: CompressedJSON,
@@ -49,7 +49,7 @@ class InferenceUnionBuilder extends UnionBuilder<Value[], Value[], any> {
 }
 
 export class TypeInference {
-    private readonly _typeBuilder = new TypeBuilder();
+    private readonly _typeBuilder = new TypeGraph();
 
     constructor(private readonly _inferMaps: boolean, private readonly _inferEnums: boolean) {}
 
