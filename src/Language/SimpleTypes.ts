@@ -5,7 +5,6 @@ import * as _ from "lodash";
 import { Set, List, Map, OrderedMap, OrderedSet, Collection } from "immutable";
 
 import {
-    TopLevels,
     Type,
     PrimitiveType,
     ArrayType,
@@ -18,6 +17,7 @@ import {
     removeNullFromUnion,
     matchType
 } from "../Type";
+import { TypeGraph } from "../TypeBuilder";
 
 import { Source, Sourcelike } from "../Source";
 
@@ -47,9 +47,9 @@ export default class SimpleTypesTargetLanguage extends TargetLanguage {
         super("Simple Types", ["types"], "txt", [SimpleTypesTargetLanguage.declareUnionsOption.definition]);
     }
 
-    renderGraph(topLevels: TopLevels, optionValues: { [name: string]: any }): RenderResult {
+    renderGraph(graph: TypeGraph, optionValues: { [name: string]: any }): RenderResult {
         return new SimpleTypesRenderer(
-            topLevels,
+            graph,
             !SimpleTypesTargetLanguage.declareUnionsOption.getValue(optionValues)
         ).render();
     }
@@ -71,8 +71,8 @@ function simpleNameStyle(original: string, uppercase: boolean): string {
 }
 
 class SimpleTypesRenderer extends ConvenienceRenderer {
-    constructor(topLevels: TopLevels, private readonly inlineUnions: boolean) {
-        super(topLevels);
+    constructor(graph: TypeGraph, private readonly inlineUnions: boolean) {
+        super(graph);
     }
 
     protected topLevelNameStyle(rawName: string): string {
