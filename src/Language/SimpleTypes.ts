@@ -17,7 +17,7 @@ import {
     removeNullFromUnion,
     matchType
 } from "../Type";
-import { TypeGraph } from "../TypeBuilder";
+import { TypeGraph } from "../TypeGraph";
 
 import { Source, Sourcelike } from "../Source";
 
