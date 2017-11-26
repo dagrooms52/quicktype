@@ -18,11 +18,17 @@ import {
 import { TypeGraph } from "./TypeGraph";
 import { defined, assert, panic } from "./Support";
 
-export abstract class TypeBuilder {
+export type TypeToBe = number;
+
+export abstract class TypeBuilder<TOther> {
     protected readonly typeGraph: TypeGraph = new TypeGraph();
 
     private _topLevels: Map<string, number> = Map();
-    private _types: List<Type | undefined> = List();
+    protected types: List<Type | undefined | TOther> = List();
+
+    private _namesToAdd: Map<number, { names: NameOrNames; isInferred: boolean }[]> = Map();
+
+    protected abstract typeForEntry(entry: Type | undefined | TOther): Type | undefined;
 
     addTopLevel = (name: string, t: Type): void => {
         assert(t.typeGraph === this.typeGraph, "Adding top-level to wrong type graph");
@@ -30,135 +36,219 @@ export abstract class TypeBuilder {
         this._topLevels = this._topLevels.set(name, t.indexInGraph);
     };
 
+    protected reserveTypeIndex(): number {
+        const index = this.types.size;
+        this.types = this.types.push(undefined);
+        return index;
+    }
+
     protected addType<T extends Type>(creator: (index: number) => T): T {
-        const index = this._types.size;
-        this._types = this._types.push(undefined);
+        const index = this.reserveTypeIndex();
         const t = creator(index);
-        assert(this._types.get(index) === undefined, "A type index was committed twice");
-        this._types = this._types.set(index, t);
+        assert(this.types.get(index) === undefined, "A type index was committed twice");
+        this.types = this.types.set(index, t);
+        if (t.isNamedType()) {
+            const namesToAdd = this._namesToAdd.get(index);
+            if (namesToAdd !== undefined) {
+                for (const nta of namesToAdd) {
+                    t.addNames(nta.names, nta.isInferred);
+                }
+                this._namesToAdd = this._namesToAdd.remove(index);
+            }
+        }
         return t;
     }
 
+    protected addNames = (typeIndex: number, names: NameOrNames, isInferred: boolean): void => {
+        const t = this.typeForEntry(this.types.get(typeIndex));
+        if (t !== undefined) {
+            if (!t.isNamedType()) {
+                return panic("Trying to give names to unnamed type");
+            }
+            t.addNames(names, isInferred);
+        } else {
+            let entries = this._namesToAdd.get(typeIndex);
+            if (entries === undefined) {
+                entries = [];
+                this._namesToAdd = this._namesToAdd.set(typeIndex, entries);
+            }
+            entries.push({ names, isInferred });
+        }
+    };
+
     finish = (): TypeGraph => {
-        this.typeGraph.freeze(this._topLevels, this._types.map(defined));
+        assert(this._namesToAdd.isEmpty(), "We're finishing, but still names to add left");
+        this.typeGraph.freeze(this._topLevels, this.types.map(t => defined(this.typeForEntry(t))));
         return this.typeGraph;
     };
 
-    abstract getPrimitiveType(kind: PrimitiveTypeKind): PrimitiveType;
-    abstract getEnumType(names: NameOrNames, isInferred: boolean, cases: OrderedSet<string>): EnumType;
-    abstract getMapType(values: Type): MapType;
-    abstract getArrayType(items: Type): ArrayType;
-    abstract getClassType(names: NameOrNames, isInferred: boolean, properties: Map<string, Type>): ClassType;
-    abstract getUnionType(names: NameOrNames, isInferred: boolean, members: OrderedSet<Type>): UnionType;
+    abstract getPrimitiveType(kind: PrimitiveTypeKind): TypeToBe;
+    abstract getEnumType(names: NameOrNames, isInferred: boolean, cases: OrderedSet<string>): TypeToBe;
+    abstract getMapType(values: TypeToBe): TypeToBe;
+    abstract getArrayType(items: TypeToBe): TypeToBe;
+    abstract getClassType(names: NameOrNames, isInferred: boolean, properties: Map<string, TypeToBe>): TypeToBe;
+    abstract getUnionType(names: NameOrNames, isInferred: boolean, members: OrderedSet<TypeToBe>): TypeToBe;
 
-    makeNullable = (t: Type, typeNames: NameOrNames, areNamesInferred: boolean): Type => {
+    makeNullable = (index: TypeToBe, typeNames: NameOrNames, areNamesInferred: boolean): TypeToBe => {
+        const t = defined(this.typeForEntry(this.types.get(index)));
         if (t.kind === "null") {
-            return t;
+            return index;
         }
         const nullType = this.getPrimitiveType("null");
         if (!(t instanceof UnionType)) {
-            return this.getUnionType(typeNames, areNamesInferred, OrderedSet([t, nullType]));
+            return this.getUnionType(typeNames, areNamesInferred, OrderedSet([index, nullType]));
         }
         const [maybeNull, nonNulls] = removeNullFromUnion(t);
-        if (maybeNull) return t;
-        return this.getUnionType(typeNames, areNamesInferred, nonNulls.add(nullType));
+        if (maybeNull) return index;
+        return this.getUnionType(typeNames, areNamesInferred, nonNulls.map(nn => nn.indexInGraph).add(nullType));
     };
 }
 
-export class TypeGraphBuilder extends TypeBuilder {
+export abstract class CoalescingTypeBuilder<TOther> extends TypeBuilder<TOther> {
     // FIXME: make mutable?
-    private _primitiveTypes: Map<PrimitiveTypeKind, PrimitiveType> = Map();
-    private _mapTypes: Map<Type, MapType> = Map();
-    private _arrayTypes: Map<Type, ArrayType> = Map();
-    private _enumTypes: Map<OrderedSet<string>, EnumType> = Map();
-    private _classTypes: Map<Map<string, Type>, ClassType> = Map();
-    private _unionTypes: Map<OrderedSet<Type>, UnionType> = Map();
+    private _primitiveTypes: Map<PrimitiveTypeKind, TypeToBe> = Map();
+    private _mapTypes: Map<TypeToBe, TypeToBe> = Map();
+    private _arrayTypes: Map<TypeToBe, TypeToBe> = Map();
+    private _enumTypes: Map<OrderedSet<string>, TypeToBe> = Map();
+    private _classTypes: Map<Map<string, TypeToBe>, TypeToBe> = Map();
+    private _unionTypes: Map<OrderedSet<TypeToBe>, TypeToBe> = Map();
 
-    getPrimitiveType(kind: PrimitiveTypeKind): PrimitiveType {
-        let t = this._primitiveTypes.get(kind);
-        if (t === undefined) {
-            t = this.addType(index => new PrimitiveType(this.typeGraph, index, kind));
-            this._primitiveTypes = this._primitiveTypes.set(kind, t);
+    getPrimitiveType(kind: PrimitiveTypeKind): TypeToBe {
+        let index = this._primitiveTypes.get(kind);
+        if (index === undefined) {
+            index = this.addType(i => new PrimitiveType(this.typeGraph, i, kind)).indexInGraph;
+            this._primitiveTypes = this._primitiveTypes.set(kind, index);
         }
-        return t;
+        return index;
     }
 
-    getEnumType(names: NameOrNames, isInferred: boolean, cases: OrderedSet<string>): EnumType {
-        let t = this._enumTypes.get(cases);
-        if (t === undefined) {
-            t = this.addType(index => new EnumType(this.typeGraph, index, names, isInferred, cases));
-            this._enumTypes = this._enumTypes.set(cases, t);
+    getEnumType(names: NameOrNames, isInferred: boolean, cases: OrderedSet<string>): TypeToBe {
+        let index = this._enumTypes.get(cases);
+        if (index === undefined) {
+            index = this.addType(i => new EnumType(this.typeGraph, i, names, isInferred, cases)).indexInGraph;
+            this._enumTypes = this._enumTypes.set(cases, index);
         } else {
-            t.addNames(names, isInferred);
+            this.addNames(index, names, isInferred);
         }
-        return t;
+        return index;
     }
 
-    getMapType(values: Type): MapType {
-        let t = this._mapTypes.get(values);
-        if (t === undefined) {
-            t = this.addType(index => new MapType(this.typeGraph, index, values));
-            this._mapTypes = this._mapTypes.set(values, t);
+    getMapType(values: TypeToBe): TypeToBe {
+        let index = this._mapTypes.get(values);
+        if (index === undefined) {
+            index = this.addType(i => new MapType(this.typeGraph, i, values)).indexInGraph;
+            this._mapTypes = this._mapTypes.set(values, index);
         }
-        return t;
+        return index;
     }
 
-    getArrayType(items: Type): ArrayType {
-        let t = this._arrayTypes.get(items);
-        if (t === undefined) {
-            t = this.addType(index => new ArrayType(this.typeGraph, index, items));
-            this._arrayTypes = this._arrayTypes.set(items, t);
+    getArrayType(items: TypeToBe): TypeToBe {
+        let index = this._arrayTypes.get(items);
+        if (index === undefined) {
+            index = this.addType(i => new ArrayType(this.typeGraph, i, items)).indexInGraph;
+            this._arrayTypes = this._arrayTypes.set(items, index);
         }
-        return t;
+        return index;
     }
 
-    getClassType(names: NameOrNames, isInferred: boolean, properties: Map<string, Type>): ClassType {
-        let t = this._classTypes.get(properties);
-        if (t === undefined) {
-            t = this.addType(index => new ClassType(this.typeGraph, index, names, isInferred, properties));
-            this._classTypes = this._classTypes.set(properties, t);
+    getClassType(names: NameOrNames, isInferred: boolean, properties: Map<string, TypeToBe>): TypeToBe {
+        let index = this._classTypes.get(properties);
+        if (index === undefined) {
+            const t = this.addType(i => new ClassType(this.typeGraph, i, names, isInferred, properties));
+            index = t.indexInGraph;
+            this._classTypes = this._classTypes.set(properties, index);
         } else {
-            t.addNames(names, isInferred);
+            this.addNames(index, names, isInferred);
         }
-        return t;
+        return index;
     }
 
-    getUniqueClassType = (names: NameOrNames, isInferred: boolean, properties?: Map<string, Type>): ClassType => {
-        return this.addType(index => new ClassType(this.typeGraph, index, names, isInferred, properties));
+    getUnionType(names: NameOrNames, isInferred: boolean, members: OrderedSet<TypeToBe>): TypeToBe {
+        let index = this._unionTypes.get(members);
+        if (index === undefined) {
+            const t = this.addType(i => new UnionType(this.typeGraph, i, names, isInferred, members));
+            index = t.indexInGraph;
+            this._unionTypes = this._unionTypes.set(members, index);
+        } else {
+            this.addNames(index, names, isInferred);
+        }
+        return index;
+    }
+}
+
+export class TypeGraphBuilder extends CoalescingTypeBuilder<void> {
+    protected typeForEntry(entry: Type | undefined): Type | undefined {
+        return entry;
+    }
+
+    getUniqueClassType = (names: NameOrNames, isInferred: boolean, properties?: Map<string, TypeToBe>): TypeToBe => {
+        return this.addType(index => new ClassType(this.typeGraph, index, names, isInferred, properties)).indexInGraph;
     };
 
-    getUnionType(names: NameOrNames, isInferred: boolean, members: OrderedSet<Type>): UnionType {
-        let t = this._unionTypes.get(members);
-        if (t === undefined) {
-            t = this.addType(index => new UnionType(this.typeGraph, index, names, isInferred, members));
-            this._unionTypes = this._unionTypes.set(members, t);
-        } else {
-            t.addNames(names, isInferred);
-        }
-        return t;
-    }
-
-    getUniqueUnionType = (name: string, isInferred: boolean, members: OrderedSet<Type>): UnionType => {
-        return this.addType(index => new UnionType(this.typeGraph, index, name, isInferred, members));
+    getUniqueUnionType = (name: string, isInferred: boolean, members: OrderedSet<TypeToBe>): TypeToBe => {
+        return this.addType(index => new UnionType(this.typeGraph, index, name, isInferred, members)).indexInGraph;
     };
 }
 
-export class GraphRewriteBuilder extends TypeBuilder {
-    constructor(private readonly _graphToBeRewritten: TypeGraph) {
+export class GraphRewriteBuilder extends CoalescingTypeBuilder<number> {
+    private _setsToReplaceByMember: Map<number, Set<number>>;
+    private _reconstitutedTypes: Map<number, TypeToBe> = Map();
+
+    constructor(
+        private readonly _originalGraph: TypeGraph,
+        setsToReplace: Type[][],
+        private readonly _replacer: (typesToReplace: Set<number>, builder: GraphRewriteBuilder) => TypeToBe
+    ) {
         super();
+        this._setsToReplaceByMember = Map();
+        for (const types of setsToReplace) {
+            const set = Set(types.map(t => t.indexInGraph));
+            set.forEach(index => {
+                assert(!this._setsToReplaceByMember.has(index), "A type is member of more than one set to be replaced");
+                this._setsToReplaceByMember = this._setsToReplaceByMember.set(index, set);
+            });
+        }
     }
 
-    getPrimitiveType(kind: PrimitiveTypeKind): PrimitiveType {}
+    protected typeForEntry(entry: Type | undefined | number): Type | undefined {
+        if (typeof entry === "number") {
+            return this.typeForEntry(this.types.get(entry));
+        }
+        return entry;
+    }
 
-    getEnumType(names: NameOrNames, isInferred: boolean, cases: OrderedSet<string>): EnumType {}
+    private withForwardingIndex(typeCreator: (forwardingIndex: number) => number): number {
+        const forwardingIndex = this.reserveTypeIndex();
+        const actualIndex = typeCreator(forwardingIndex);
+        assert(this.types.get(forwardingIndex) === undefined, "Forwarding slow should not be set");
+        this.types = this.types.set(forwardingIndex, actualIndex);
+        return actualIndex;
+    }
 
-    getMapType(values: Type): MapType {}
+    private replaceSet(typesToReplace: Set<number>): TypeToBe {
+        return this.withForwardingIndex(forwardingIndex => {
+            typesToReplace.forEach(originalIndex => {
+                this._reconstitutedTypes = this._reconstitutedTypes.set(originalIndex, forwardingIndex);
+                this._setsToReplaceByMember = this._setsToReplaceByMember.remove(originalIndex);
+            });
+            return this._replacer(typesToReplace, this);
+        });
+    }
 
-    getArrayType(items: Type): ArrayType {}
-
-    getClassType(names: NameOrNames, isInferred: boolean, properties: Map<string, Type>): ClassType {}
-
-    getUnionType(names: NameOrNames, isInferred: boolean, members: OrderedSet<Type>): UnionType {}
+    private getReconstitutedType = (originalIndex: number): TypeToBe => {
+        const maybeTypeToBe = this._reconstitutedTypes.get(originalIndex);
+        if (maybeTypeToBe !== undefined) {
+            return maybeTypeToBe;
+        }
+        const maybeSet = this._setsToReplaceByMember.get(originalIndex);
+        if (maybeSet !== undefined) {
+            return this.replaceSet(maybeSet);
+        }
+        return this.withForwardingIndex(forwardingIndex => {
+            this._reconstitutedTypes = this._reconstitutedTypes.set(originalIndex, forwardingIndex);
+            return this._originalGraph.typeAtIndex(originalIndex).map(this, this.getReconstitutedType);
+        });
+    };
 }
 
 export abstract class UnionBuilder<TArray, TClass, TMap> {
@@ -228,12 +318,12 @@ export abstract class UnionBuilder<TArray, TClass, TMap> {
         this._enumCaseMap[s] += 1;
     };
 
-    protected abstract makeEnum(cases: string[]): Type | null;
-    protected abstract makeClass(classes: TClass[], maps: TMap[]): Type;
-    protected abstract makeArray(arrays: TArray[]): Type;
+    protected abstract makeEnum(cases: string[]): TypeToBe | null;
+    protected abstract makeClass(classes: TClass[], maps: TMap[]): TypeToBe;
+    protected abstract makeArray(arrays: TArray[]): TypeToBe;
 
-    buildUnion = (unique: boolean): Type => {
-        const types: Type[] = [];
+    buildUnion = (unique: boolean): TypeToBe => {
+        const types: TypeToBe[] = [];
 
         if (this._haveAny) {
             return this.typeBuilder.getPrimitiveType("any");

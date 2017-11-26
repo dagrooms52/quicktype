@@ -68,7 +68,7 @@ function isPartOfClique(c: ClassType, clique: ClassType[]): boolean {
 export function combineClasses(graph: TypeGraph): void {
     // FIXME: Don't use a `TypeBuilder` here.  Instead, have `alter` work
     // properly in `TypeGraph` and permit the whole transformation.
-    const builder = new TypeGraphBuilder(graph);
+    const builder = new TypeGraphBuilder();
     let unprocessedClasses = graph.allNamedTypesSeparated().classes.toArray();
     const cliques: ClassType[][] = [];
 

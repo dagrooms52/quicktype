@@ -3,7 +3,7 @@
 import { OrderedSet, OrderedMap, Map, Set, Collection, List } from "immutable";
 import { defined, panic, assert } from "./Support";
 import { TypeGraph } from "./TypeGraph";
-import { TypeGraphBuilder } from "./TypeBuilder";
+import { TypeGraphBuilder, TypeToBe, ArrayTypeToBe, TypeBuilder, MapTypeToBe } from "./TypeBuilder";
 
 export type PrimitiveTypeKind = "any" | "null" | "bool" | "integer" | "double" | "string";
 export type NamedTypeKind = "class" | "enum" | "union";
@@ -25,7 +25,7 @@ export abstract class Type {
     }
 
     abstract get isNullable(): boolean;
-    abstract map(builder: TypeGraphBuilder, f: (t: Type) => Type): Type;
+    abstract map(builder: TypeBuilder<any>, f: (index: number) => TypeToBe): TypeToBe;
 
     equals(other: any): boolean {
         if (!Object.prototype.hasOwnProperty.call(other, "indexInGraph")) {
@@ -54,8 +54,8 @@ export class PrimitiveType extends Type {
         return this.kind === "null";
     }
 
-    map(builder: TypeGraphBuilder, f: (t: Type) => Type): this {
-        return this;
+    map(builder: TypeBuilder<any>, f: (index: number) => TypeToBe): TypeToBe {
+        return builder.getPrimitiveType(this.kind);
     }
 }
 
@@ -63,18 +63,11 @@ function isNull(t: Type): t is PrimitiveType {
     return t.kind === "null";
 }
 
-function constituentIndex(container: Type, constituent: Type): number {
-    assert(container.typeGraph === constituent.typeGraph, "Container and constituent are not in the same type graph");
-    return constituent.indexInGraph;
-}
-
 export class ArrayType extends Type {
     readonly kind: "array";
-    private readonly _itemsIndex: number;
 
-    constructor(typeGraph: TypeGraph, indexInGraph: number, items: Type) {
+    constructor(typeGraph: TypeGraph, indexInGraph: number, private readonly _itemsIndex: number) {
         super(typeGraph, indexInGraph, "array");
-        this._itemsIndex = constituentIndex(this, items);
     }
 
     get items(): Type {
@@ -89,20 +82,16 @@ export class ArrayType extends Type {
         return false;
     }
 
-    map(builder: TypeGraphBuilder, f: (t: Type) => Type): ArrayType {
-        const items = f(this.items);
-        if (items === this.items) return this;
-        return builder.getArrayType(items);
+    map(builder: TypeBuilder<any>, f: (index: number) => TypeToBe): ArrayTypeToBe {
+        return builder.getArrayType(f(this._itemsIndex));
     }
 }
 
 export class MapType extends Type {
     readonly kind: "map";
-    private readonly _valuesIndex: number;
 
-    constructor(typeGraph: TypeGraph, indexInGraph: number, values: Type) {
+    constructor(typeGraph: TypeGraph, indexInGraph: number, private readonly _valuesIndex: number) {
         super(typeGraph, indexInGraph, "map");
-        this._valuesIndex = constituentIndex(this, values);
     }
 
     get values(): Type {
@@ -117,10 +106,8 @@ export class MapType extends Type {
         return false;
     }
 
-    map(builder: TypeGraphBuilder, f: (t: Type) => Type): MapType {
-        const values = f(this.values);
-        if (values === this.values) return this;
-        return builder.getMapType(values);
+    map(builder: TypeBuilder<any>, f: (index: number) => TypeToBe): MapTypeToBe {
+        return builder.getMapType(f(this._valuesIndex));
     }
 }
 
@@ -227,33 +214,33 @@ export abstract class NamedType extends Type {
 
 export class ClassType extends NamedType {
     kind: "class";
-    private _propertyIndexes?: Map<string, number>;
 
     constructor(
         typeGraph: TypeGraph,
         indexInGraph: number,
         names: NameOrNames,
         areNamesInferred: boolean,
-        properties?: Map<string, Type>
+        private _propertyIndexes?: Map<string, number>
     ) {
         super(typeGraph, indexInGraph, "class", names, areNamesInferred);
-        if (properties !== undefined) {
-            this.setProperties(properties);
-        }
     }
 
-    setProperties(properties: Map<string, Type>): void {
+    setProperties(propertyIndexes: Map<string, number>): void {
         if (this._propertyIndexes !== undefined) {
             return panic("Can only set class properties once");
         }
-        this._propertyIndexes = properties.map(t => constituentIndex(this, t));
+        this._propertyIndexes = propertyIndexes;
     }
 
-    get properties(): Map<string, Type> {
+    private getPropertyIndexes(): Map<string, number> {
         if (this._propertyIndexes === undefined) {
             return panic("Class properties accessed before they were set");
         }
-        return this._propertyIndexes.map(this.typeGraph.typeAtIndex);
+        return this._propertyIndexes;
+    }
+
+    get properties(): Map<string, Type> {
+        return this.getPropertyIndexes().map(this.typeGraph.typeAtIndex);
     }
 
     get sortedProperties(): OrderedMap<string, Type> {
@@ -271,14 +258,8 @@ export class ClassType extends NamedType {
         return false;
     }
 
-    map(builder: TypeGraphBuilder, f: (t: Type) => Type): ClassType {
-        let same = true;
-        const properties = this.properties.map(t => {
-            const ft = f(t);
-            if (ft !== t) same = false;
-            return ft;
-        });
-        if (same) return this;
+    map(builder: TypeBuilder<any>, f: (index: number) => TypeToBe): TypeToBe {
+        const properties = this.getPropertyIndexes().map(f);
         return builder.getClassType(this.names, this.areNamesInferred, properties);
     }
 }
@@ -304,25 +285,23 @@ export class EnumType extends NamedType {
         return false;
     }
 
-    map(builder: TypeGraphBuilder, f: (t: Type) => Type): this {
-        return this;
+    map(builder: TypeBuilder<any>, f: (index: number) => TypeToBe): TypeToBe {
+        return builder.getEnumType(this.names, this.areNamesInferred, this.names);
     }
 }
 
 export class UnionType extends NamedType {
     kind: "union";
-    private readonly _memberIndexes: OrderedSet<number>;
 
     constructor(
         typeGraph: TypeGraph,
         indexInGraph: number,
         names: NameOrNames,
         areNamesInferred: boolean,
-        members: OrderedSet<Type>
+        private readonly _memberIndexes: OrderedSet<number>
     ) {
         super(typeGraph, indexInGraph, "union", names, areNamesInferred);
-        assert(members.size > 1);
-        this._memberIndexes = members.map(t => constituentIndex(this, t));
+        assert(_memberIndexes.size > 1, "Union has zero members");
     }
 
     get members(): OrderedSet<Type> {
@@ -341,14 +320,8 @@ export class UnionType extends NamedType {
         return this.findMember("null") !== undefined;
     }
 
-    map(builder: TypeGraphBuilder, f: (t: Type) => Type): UnionType {
-        let same = true;
-        const members = this.members.map(t => {
-            const ft = f(t);
-            if (ft !== t) same = false;
-            return ft;
-        });
-        if (same) return this;
+    map(builder: TypeBuilder<any>, f: (index: number) => TypeToBe): TypeToBe {
+        const members = this._memberIndexes.map(f);
         return builder.getUnionType(this.names, this.areNamesInferred, members);
     }
 
