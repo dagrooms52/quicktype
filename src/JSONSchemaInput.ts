@@ -6,7 +6,7 @@ import * as pluralize from "pluralize";
 import { Type, ClassType, NameOrNames, matchType, EnumType } from "./Type";
 import { panic, assertNever, StringMap, checkStringMap } from "./Support";
 import { TypeGraph } from "./TypeGraph";
-import { UnionBuilder, TypeBuilder } from "./TypeBuilder";
+import { UnionBuilder, TypeGraphBuilder } from "./TypeBuilder";
 
 enum PathElementKind {
     Root,
@@ -111,7 +111,7 @@ function checkTypeList(typeOrTypes: any): string[] {
 
 class UnifyUnionBuilder extends UnionBuilder<Type, ClassType, Type> {
     constructor(
-        typeBuilder: TypeBuilder,
+        typeBuilder: TypeGraphBuilder,
         typeName: string,
         isInferred: boolean,
         private readonly _unifyTypes: (typesToUnify: Type[], typeName: string, isInferred: boolean) => Type
@@ -156,7 +156,7 @@ class UnifyUnionBuilder extends UnionBuilder<Type, ClassType, Type> {
     }
 }
 
-export function schemaToType(typeBuilder: TypeBuilder, topLevelName: string, rootJson: any): Type {
+export function schemaToType(typeBuilder: TypeGraphBuilder, topLevelName: string, rootJson: any): Type {
     const root = checkStringMap(rootJson);
     let typeForPath = Map<Ref, Type>();
 

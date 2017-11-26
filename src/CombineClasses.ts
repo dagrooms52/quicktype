@@ -3,7 +3,7 @@
 import { Map, OrderedMap, OrderedSet } from "immutable";
 
 import { ClassType, Type, nonNullTypeCases } from "./Type";
-import { TypeBuilder } from "./TypeBuilder";
+import { TypeGraphBuilder } from "./TypeBuilder";
 import { assert, panic } from "./Support";
 import { TypeGraph } from "./TypeGraph";
 
@@ -68,7 +68,7 @@ function isPartOfClique(c: ClassType, clique: ClassType[]): boolean {
 export function combineClasses(graph: TypeGraph): void {
     // FIXME: Don't use a `TypeBuilder` here.  Instead, have `alter` work
     // properly in `TypeGraph` and permit the whole transformation.
-    const builder = new TypeBuilder(graph);
+    const builder = new TypeGraphBuilder(graph);
     let unprocessedClasses = graph.allNamedTypesSeparated().classes.toArray();
     const cliques: ClassType[][] = [];
 
