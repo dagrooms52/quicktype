@@ -11,6 +11,7 @@ import TypeScriptTargetLanguage from "./TypeScript";
 import SwiftTargetLanguage from "./Swift";
 import ElmTargetLanguage from "./Elm";
 import JSONSchemaTargetLanguage from "./JSONSchema";
+import PythonTargetLanguage from "./Python";
 
 export const all: TargetLanguage[] = [
     new CSharpTargetLanguage(),
@@ -21,7 +22,8 @@ export const all: TargetLanguage[] = [
     new SwiftTargetLanguage(),
     new ElmTargetLanguage(),
     new JSONSchemaTargetLanguage(),
-    new SimpleTypesTargetLanguage()
+    new SimpleTypesTargetLanguage(),
+    new PythonTargetLanguage()
 ];
 
 export function languageNamed(name: string): TargetLanguage | undefined {
