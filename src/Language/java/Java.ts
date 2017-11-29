@@ -15,8 +15,8 @@ import {
     matchType,
     nullableFromUnion,
     removeNullFromUnion
-} from "../Type";
-import { Sourcelike, maybeAnnotated, modifySource } from "../Source";
+} from "../../Type";
+import { Sourcelike, maybeAnnotated, modifySource } from "../../Source";
 import {
     utf16LegalizeCharacters,
     pascalCase,
@@ -29,14 +29,14 @@ import {
     isLetter,
     isDigit,
     capitalize
-} from "../Strings";
-import { intercalate, defined, assertNever, nonNull, assert } from "../Support";
-import { Namespace, Name, DependencyName, Namer, funPrefixNamer } from "../Naming";
-import { RenderResult } from "../Renderer";
-import { ConvenienceRenderer } from "../ConvenienceRenderer";
-import { TargetLanguage } from "../TargetLanguage";
-import { BooleanOption, StringOption } from "../RendererOptions";
-import { IssueAnnotationData, anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../Annotation";
+} from "../../Strings";
+import { intercalate, defined, assertNever, nonNull, assert } from "../../Support";
+import { Namespace, Name, DependencyName, Namer, funPrefixNamer } from "../../Naming";
+import { RenderResult } from "../../Renderer";
+import { ConvenienceRenderer } from "../../ConvenienceRenderer";
+import { TargetLanguage } from "../../TargetLanguage";
+import { BooleanOption, StringOption } from "../../RendererOptions";
+import { IssueAnnotationData, anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../../Annotation";
 
 const unicode = require("unicode-properties");
 

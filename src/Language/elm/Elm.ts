@@ -2,8 +2,8 @@
 
 import { Map, List } from "immutable";
 
-import { TargetLanguage } from "../TargetLanguage";
-import { EnumOption, StringOption } from "../RendererOptions";
+import { TargetLanguage } from "../../TargetLanguage";
+import { EnumOption, StringOption } from "../../RendererOptions";
 import {
     TopLevels,
     NamedType,
@@ -14,10 +14,10 @@ import {
     UnionType,
     EnumType,
     PrimitiveType
-} from "../Type";
-import { RenderResult } from "../Renderer";
-import { ConvenienceRenderer } from "../ConvenienceRenderer";
-import { Namer, Name, DependencyName, funPrefixNamer, AssociatedName, Namespace } from "../Naming";
+} from "../../Type";
+import { RenderResult } from "../../Renderer";
+import { ConvenienceRenderer } from "../../ConvenienceRenderer";
+import { Namer, Name, DependencyName, funPrefixNamer, AssociatedName, Namespace } from "../../Naming";
 import {
     legalizeCharacters,
     isLetterOrUnderscoreOrDigit,
@@ -27,10 +27,10 @@ import {
     decapitalize,
     stringEscape,
     isAscii
-} from "../Strings";
-import { defined, intercalate } from "../Support";
-import { Sourcelike, maybeAnnotated, modifySource } from "../Source";
-import { anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../Annotation";
+} from "../../Strings";
+import { defined, intercalate } from "../../Support";
+import { Sourcelike, maybeAnnotated, modifySource } from "../../Source";
+import { anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../../Annotation";
 
 export default class ElmTargetLanguage extends TargetLanguage {
     private readonly _listOption: EnumOption<boolean>;

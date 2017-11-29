@@ -14,8 +14,8 @@ import {
     nullableFromUnion,
     matchType,
     removeNullFromUnion
-} from "../Type";
-import { Namespace, Name, DependencyName, Namer, funPrefixNamer } from "../Naming";
+} from "../../Type";
+import { Namespace, Name, DependencyName, Namer, funPrefixNamer } from "../../Naming";
 import {
     legalizeCharacters,
     pascalCase,
@@ -23,14 +23,14 @@ import {
     isLetterOrUnderscore,
     isLetterOrUnderscoreOrDigit,
     stringEscape
-} from "../Strings";
-import { defined } from "../Support";
-import { StringOption } from "../RendererOptions";
-import { Sourcelike, maybeAnnotated } from "../Source";
-import { anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../Annotation";
-import { TargetLanguage } from "../TargetLanguage";
-import { RenderResult } from "../Renderer";
-import { ConvenienceRenderer } from "../ConvenienceRenderer";
+} from "../../Strings";
+import { defined } from "../../Support";
+import { StringOption } from "../../RendererOptions";
+import { Sourcelike, maybeAnnotated } from "../../Source";
+import { anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../../Annotation";
+import { TargetLanguage } from "../../TargetLanguage";
+import { RenderResult } from "../../Renderer";
+import { ConvenienceRenderer } from "../../ConvenienceRenderer";
 
 export default class GoTargetLanguage extends TargetLanguage {
     private readonly _packageOption: StringOption;

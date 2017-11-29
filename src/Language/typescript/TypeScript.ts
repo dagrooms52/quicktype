@@ -10,16 +10,16 @@ import {
     ClassType,
     nullableFromUnion,
     matchType
-} from "../Type";
-import { utf16LegalizeCharacters, pascalCase, camelCase, startWithLetter, stringEscape } from "../Strings";
-import { intercalate, panic } from "../Support";
+} from "../../Type";
+import { utf16LegalizeCharacters, pascalCase, camelCase, startWithLetter, stringEscape } from "../../Strings";
+import { intercalate, panic } from "../../Support";
 
-import { Sourcelike, modifySource } from "../Source";
-import { Namer, Name } from "../Naming";
-import { Renderer, RenderResult } from "../Renderer";
-import { ConvenienceRenderer } from "../ConvenienceRenderer";
-import { TargetLanguage } from "../TargetLanguage";
-import { BooleanOption } from "../RendererOptions";
+import { Sourcelike, modifySource } from "../../Source";
+import { Namer, Name } from "../../Naming";
+import { Renderer, RenderResult } from "../../Renderer";
+import { ConvenienceRenderer } from "../../ConvenienceRenderer";
+import { TargetLanguage } from "../../TargetLanguage";
+import { BooleanOption } from "../../RendererOptions";
 
 const unicode = require("unicode-properties");
 

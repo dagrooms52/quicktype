@@ -15,16 +15,16 @@ import {
     matchType,
     nullableFromUnion,
     removeNullFromUnion
-} from "../Type";
-import { Sourcelike, maybeAnnotated } from "../Source";
-import { utf16LegalizeCharacters, pascalCase, startWithLetter, utf16StringEscape } from "../Strings";
-import { intercalate, defined, assertNever, assert } from "../Support";
-import { Namespace, Name, DependencyName, Namer, funPrefixNamer } from "../Naming";
-import { RenderResult } from "../Renderer";
-import { ConvenienceRenderer } from "../ConvenienceRenderer";
-import { TargetLanguage } from "../TargetLanguage";
-import { BooleanOption, StringOption, EnumOption } from "../RendererOptions";
-import { IssueAnnotationData, anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../Annotation";
+} from "../../Type";
+import { Sourcelike, maybeAnnotated } from "../../Source";
+import { utf16LegalizeCharacters, pascalCase, startWithLetter, utf16StringEscape } from "../../Strings";
+import { intercalate, defined, assertNever, assert } from "../../Support";
+import { Namespace, Name, DependencyName, Namer, funPrefixNamer } from "../../Naming";
+import { RenderResult } from "../../Renderer";
+import { ConvenienceRenderer } from "../../ConvenienceRenderer";
+import { TargetLanguage } from "../../TargetLanguage";
+import { BooleanOption, StringOption, EnumOption } from "../../RendererOptions";
+import { IssueAnnotationData, anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../../Annotation";
 
 const unicode = require("unicode-properties");
 

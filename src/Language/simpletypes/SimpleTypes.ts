@@ -17,18 +17,18 @@ import {
     nullableFromUnion,
     removeNullFromUnion,
     matchType
-} from "../Type";
-import { Source, Sourcelike } from "../Source";
-import { utf16LegalizeCharacters, pascalCase, startWithLetter, utf16StringEscape } from "../Strings";
-import { intercalate, defined } from "../Support";
+} from "../../Type";
+import { Source, Sourcelike } from "../../Source";
+import { utf16LegalizeCharacters, pascalCase, startWithLetter, utf16StringEscape } from "../../Strings";
+import { intercalate, defined } from "../../Support";
 
-import { Namer, Namespace, Name, DependencyName, SimpleName, FixedName, keywordNamespace } from "../Naming";
+import { Namer, Namespace, Name, DependencyName, SimpleName, FixedName, keywordNamespace } from "../../Naming";
 
-import { Renderer, RenderResult } from "../Renderer";
-import { ConvenienceRenderer } from "../ConvenienceRenderer";
+import { Renderer, RenderResult } from "../../Renderer";
+import { ConvenienceRenderer } from "../../ConvenienceRenderer";
 
-import { TargetLanguage } from "../TargetLanguage";
-import { BooleanOption } from "../RendererOptions";
+import { TargetLanguage } from "../../TargetLanguage";
+import { BooleanOption } from "../../RendererOptions";
 
 const unicode = require("unicode-properties");
 

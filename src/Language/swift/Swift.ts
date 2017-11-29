@@ -1,6 +1,6 @@
 "use strict";
 
-import { TargetLanguage } from "../TargetLanguage";
+import { TargetLanguage } from "../../TargetLanguage";
 import {
     TopLevels,
     Type,
@@ -14,13 +14,13 @@ import {
     nullableFromUnion,
     removeNullFromUnion,
     filterTypes
-} from "../Type";
-import { Namespace, Name, Namer, funPrefixNamer } from "../Naming";
-import { BooleanOption, EnumOption } from "../RendererOptions";
-import { Sourcelike, maybeAnnotated, modifySource } from "../Source";
-import { anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../Annotation";
-import { RenderResult } from "../Renderer";
-import { ConvenienceRenderer } from "../ConvenienceRenderer";
+} from "../../Type";
+import { Namespace, Name, Namer, funPrefixNamer } from "../../Naming";
+import { BooleanOption, EnumOption } from "../../RendererOptions";
+import { Sourcelike, maybeAnnotated, modifySource } from "../../Source";
+import { anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../../Annotation";
+import { RenderResult } from "../../Renderer";
+import { ConvenienceRenderer } from "../../ConvenienceRenderer";
 import {
     legalizeCharacters,
     startWithLetter,
@@ -34,8 +34,8 @@ import {
     isPrintable,
     intToHex,
     decapitalize
-} from "../Strings";
-import { defined } from "../Support";
+} from "../../Strings";
+import { defined } from "../../Support";
 
 export default class SwiftTargetLanguage extends TargetLanguage {
     private readonly _justTypesOption: BooleanOption;

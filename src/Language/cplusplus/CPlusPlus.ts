@@ -2,7 +2,7 @@
 
 import { Map, OrderedSet } from "immutable";
 
-import { TargetLanguage } from "../TargetLanguage";
+import { TargetLanguage } from "../../TargetLanguage";
 import {
     Type,
     TopLevels,
@@ -13,10 +13,10 @@ import {
     nullableFromUnion,
     matchType,
     removeNullFromUnion
-} from "../Type";
-import { Namespace, Name, Namer, funPrefixNamer } from "../Naming";
-import { Sourcelike, maybeAnnotated } from "../Source";
-import { anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../Annotation";
+} from "../../Type";
+import { Namespace, Name, Namer, funPrefixNamer } from "../../Naming";
+import { Sourcelike, maybeAnnotated } from "../../Source";
+import { anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../../Annotation";
 import {
     legalizeCharacters,
     pascalCase,
@@ -28,12 +28,12 @@ import {
     isLetterOrUnderscore,
     isLetterOrUnderscoreOrDigit,
     stringEscape
-} from "../Strings";
-import { defined, assertNever } from "../Support";
-import { RenderResult } from "../Renderer";
-import { ConvenienceRenderer } from "../ConvenienceRenderer";
-import { StringOption, EnumOption } from "../RendererOptions";
-import { assert } from "../Support";
+} from "../../Strings";
+import { defined, assertNever } from "../../Support";
+import { RenderResult } from "../../Renderer";
+import { ConvenienceRenderer } from "../../ConvenienceRenderer";
+import { StringOption, EnumOption } from "../../RendererOptions";
+import { assert } from "../../Support";
 
 type NamingStyle = "pascal" | "camel" | "underscore" | "upper-underscore";
 
