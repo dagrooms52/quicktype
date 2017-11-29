@@ -2,15 +2,15 @@ import { find, includes } from "lodash";
 
 import { TargetLanguage } from "../TargetLanguage";
 
-import CSharpTargetLanguage from "./CSharp";
-import GoTargetLanguage from "./Golang";
-import CPlusPlusTargetLanguage from "./CPlusPlus";
-import JavaTargetLanguage from "./Java";
-import SimpleTypesTargetLanguage from "./SimpleTypes";
-import TypeScriptTargetLanguage from "./TypeScript";
-import SwiftTargetLanguage from "./Swift";
-import ElmTargetLanguage from "./Elm";
-import JSONSchemaTargetLanguage from "./JSONSchema";
+import CSharpTargetLanguage from "./csharp/CSharp";
+import GoTargetLanguage from "./golang/Golang";
+import CPlusPlusTargetLanguage from "./cplusplus/CPlusPlusTargetLanguage";
+import JavaTargetLanguage from "./java/Java";
+import SimpleTypesTargetLanguage from "./simpletypes/SimpleTypes";
+import TypeScriptTargetLanguage from "./typescript/TypeScript";
+import SwiftTargetLanguage from "./swift/Swift";
+import ElmTargetLanguage from "./elm/Elm";
+import JSONSchemaTargetLanguage from "./jsonschema/JSONSchema";
 
 export const all: TargetLanguage[] = [
     new CSharpTargetLanguage(),

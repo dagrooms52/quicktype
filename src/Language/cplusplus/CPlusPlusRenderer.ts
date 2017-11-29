@@ -1,8 +1,6 @@
 "use strict";
 
 import { Map, OrderedSet } from "immutable";
-
-import { TargetLanguage } from "../../TargetLanguage";
 import {
     Type,
     TopLevels,
@@ -30,73 +28,9 @@ import {
     stringEscape
 } from "../../Strings";
 import { defined, assertNever } from "../../Support";
-import { RenderResult } from "../../Renderer";
 import { ConvenienceRenderer } from "../../ConvenienceRenderer";
-import { StringOption, EnumOption } from "../../RendererOptions";
 import { assert } from "../../Support";
-
-type NamingStyle = "pascal" | "camel" | "underscore" | "upper-underscore";
-
-export default class CPlusPlusTargetLanguage extends TargetLanguage {
-    private readonly _namespaceOption: StringOption;
-    private readonly _typeNamingStyleOption: EnumOption<NamingStyle>;
-    private readonly _memberNamingStyleOption: EnumOption<NamingStyle>;
-    private readonly _enumeratorNamingStyleOption: EnumOption<NamingStyle>;
-    private readonly _uniquePtrOption: EnumOption<boolean>;
-
-    constructor() {
-        const namespaceOption = new StringOption("namespace", "Name of the generated namespace", "NAME", "quicktype");
-        const pascalValue: [string, NamingStyle] = ["pascal-case", "pascal"];
-        const underscoreValue: [string, NamingStyle] = ["underscore-case", "underscore"];
-        const camelValue: [string, NamingStyle] = ["camel-case", "camel"];
-        const upperUnderscoreValue: [string, NamingStyle] = ["upper-underscore-case", "upper-underscore"];
-        const typeNamingStyleOption = new EnumOption<NamingStyle>("type-style", "Naming style for types", [
-            pascalValue,
-            underscoreValue,
-            camelValue,
-            upperUnderscoreValue
-        ]);
-        const memberNamingStyleOption = new EnumOption<NamingStyle>("member-style", "Naming style for members", [
-            underscoreValue,
-            pascalValue,
-            camelValue,
-            upperUnderscoreValue
-        ]);
-        const enumeratorNamingStyleOption = new EnumOption<NamingStyle>(
-            "enumerator-style",
-            "Naming style for enumerators",
-            [upperUnderscoreValue, underscoreValue, pascalValue, camelValue]
-        );
-        const uniquePtrOption = new EnumOption("unions", "Use containment or indirection for unions", [
-            ["containment", false],
-            ["indirection", true]
-        ]);
-        super("C++", ["c++", "cpp", "cplusplus"], "cpp", [
-            namespaceOption.definition,
-            typeNamingStyleOption.definition,
-            memberNamingStyleOption.definition,
-            enumeratorNamingStyleOption.definition,
-            uniquePtrOption.definition
-        ]);
-        this._namespaceOption = namespaceOption;
-        this._typeNamingStyleOption = typeNamingStyleOption;
-        this._memberNamingStyleOption = memberNamingStyleOption;
-        this._enumeratorNamingStyleOption = enumeratorNamingStyleOption;
-        this._uniquePtrOption = uniquePtrOption;
-    }
-
-    renderGraph(topLevels: TopLevels, optionValues: { [name: string]: any }): RenderResult {
-        const renderer = new CPlusPlusRenderer(
-            topLevels,
-            this._namespaceOption.getValue(optionValues),
-            this._typeNamingStyleOption.getValue(optionValues),
-            this._memberNamingStyleOption.getValue(optionValues),
-            this._enumeratorNamingStyleOption.getValue(optionValues),
-            this._uniquePtrOption.getValue(optionValues)
-        );
-        return renderer.render();
-    }
-}
+import { NamingStyle, keywords } from "./Common";
 
 const legalizeName = legalizeCharacters(cp => isAscii(cp) && isLetterOrUnderscoreOrDigit(cp));
 
@@ -132,109 +66,7 @@ function cppNameStyle(namingStyle: NamingStyle): (rawName: string) => string {
     };
 }
 
-const keywords = [
-    "alignas",
-    "alignof",
-    "and",
-    "and_eq",
-    "asm",
-    "atomic_cancel",
-    "atomic_commit",
-    "atomic_noexcept",
-    "auto",
-    "bitand",
-    "bitor",
-    "bool",
-    "break",
-    "case",
-    "catch",
-    "char",
-    "char16_t",
-    "char32_t",
-    "class",
-    "compl",
-    "concept",
-    "const",
-    "constexpr",
-    "const_cast",
-    "continue",
-    "co_await",
-    "co_return",
-    "co_yield",
-    "decltype",
-    "default",
-    "delete",
-    "do",
-    "double",
-    "dynamic_cast",
-    "else",
-    "enum",
-    "explicit",
-    "export",
-    "extern",
-    "false",
-    "float",
-    "for",
-    "friend",
-    "goto",
-    "if",
-    "import",
-    "inline",
-    "int",
-    "long",
-    "module",
-    "mutable",
-    "namespace",
-    "new",
-    "noexcept",
-    "not",
-    "not_eq",
-    "nullptr",
-    "operator",
-    "or",
-    "or_eq",
-    "private",
-    "protected",
-    "public",
-    "register",
-    "reinterpret_cast",
-    "requires",
-    "return",
-    "short",
-    "signed",
-    "sizeof",
-    "static",
-    "static_assert",
-    "static_cast",
-    "struct",
-    "switch",
-    "synchronized",
-    "template",
-    "this",
-    "thread_local",
-    "throw",
-    "true",
-    "try",
-    "typedef",
-    "typeid",
-    "typename",
-    "union",
-    "unsigned",
-    "using",
-    "virtual",
-    "void",
-    "volatile",
-    "wchar_t",
-    "while",
-    "xor",
-    "xor_eq",
-    "override",
-    "final",
-    "transaction_safe",
-    "transaction_safe_dynamic"
-];
-
-class CPlusPlusRenderer extends ConvenienceRenderer {
+export default class CPlusPlusRenderer extends ConvenienceRenderer {
     private readonly _typeNameStyle: (rawName: string) => string;
     private readonly _typeNamingFunction: Namer;
     private readonly _memberNamingFunction: Namer;
