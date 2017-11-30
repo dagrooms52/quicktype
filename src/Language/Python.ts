@@ -142,12 +142,14 @@ class PythonRenderer extends ConvenienceRenderer {
     };
 
     emitEnum = (e: EnumType, enumName: Name) => {
-        const caseNames: Sourcelike[] = [];
-        this.forEachCase(e, "none", name => {
-            if (caseNames.length > 0) caseNames.push(" | ");
-            caseNames.push(name);
+        this.emitLine("class ", enumName, "(Enum):");
+        let count = 0;
+        this.indent(() => {
+            this.forEachCase(e, "none", name => {
+                this.emitLine(name, " = ", (count++).toString());
+            });
         });
-        this.emitLine("enum ", enumName, " = ", caseNames);
+        this.emitLine();
     };
 
     emitUnion = (u: UnionType, unionName: Name) => {
@@ -172,10 +174,10 @@ class PythonRenderer extends ConvenienceRenderer {
     }
 
     protected emitSourceStructure() {
-        this.forEachClass("interposing", this.emitClass);
         this.forEachEnum("leading-and-interposing", this.emitEnum);
         if (!this.inlineUnions) {
             this.forEachUnion("leading-and-interposing", this.emitUnion);
         }
+        this.forEachClass("interposing", this.emitClass);
     }
 }
