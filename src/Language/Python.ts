@@ -19,7 +19,7 @@ import {
     matchType
 } from "../Type";
 import { Source, Sourcelike } from "../Source";
-import { utf16LegalizeCharacters, pascalCase, startWithLetter, utf16StringEscape } from "../Strings";
+import { utf16LegalizeCharacters, startWithLetter, utf16StringEscape, snakeCase, pascalCase } from "../Strings";
 import { intercalate, defined } from "../Support";
 
 import { Namer, Namespace, Name, DependencyName, SimpleName, FixedName, keywordNamespace } from "../Naming";
@@ -32,20 +32,16 @@ import { BooleanOption, EnumOption } from "../RendererOptions";
 
 const unicode = require("unicode-properties");
 
-type PythonVersion = "2.7" | "3.4" | "3.5" | "3.6";
+type PythonVersion = "3.5" | "3.6";
 
 export default class PythonTargetLanguage extends TargetLanguage {
     static declareUnionsOption = new BooleanOption("declare-unions", "Declare unions as named types", false);
 
     constructor() {
-        const twoSeven: [string, PythonVersion] = ["2.7", "2.7"];
-        const threeFour: [string, PythonVersion] = ["3.4", "3.4"];
         const threeFive: [string, PythonVersion] = ["3.5", "3.5"];
         const threeSix: [string, PythonVersion] = ["3.6", "3.6"];
 
         const versionOption = new EnumOption<PythonVersion>("python-version", "Target version for Python classes", [
-            twoSeven,
-            threeFour,
             threeFive,
             threeSix
         ]);
@@ -73,6 +69,10 @@ function isPartCharacter(utf16Unit: number): boolean {
 const legalizeName = utf16LegalizeCharacters(isPartCharacter);
 
 function simpleNameStyle(original: string, uppercase: boolean): string {
+    return startWithLetter(isStartCharacter, uppercase, snakeCase(legalizeName(original)));
+}
+
+function classNameStyle(original: string, uppercase: boolean): string {
     return startWithLetter(isStartCharacter, uppercase, pascalCase(legalizeName(original)));
 }
 
@@ -82,11 +82,11 @@ class PythonRenderer extends ConvenienceRenderer {
     }
 
     protected topLevelNameStyle(rawName: string): string {
-        return simpleNameStyle(rawName, true);
+        return classNameStyle(rawName, true);
     }
 
     protected get namedTypeNamer(): Namer {
-        return new Namer(n => simpleNameStyle(n, true), []);
+        return new Namer(n => classNameStyle(n, true), []);
     }
 
     protected get propertyNamer(): Namer {
@@ -94,7 +94,7 @@ class PythonRenderer extends ConvenienceRenderer {
     }
 
     protected get caseNamer(): Namer {
-        return new Namer(n => simpleNameStyle(n, true), []);
+        return new Namer(n => classNameStyle(n, true), []);
     }
 
     protected namedTypeToNameForTopLevel(type: Type): NamedType | null {
@@ -102,6 +102,10 @@ class PythonRenderer extends ConvenienceRenderer {
             return type;
         }
         return null;
+    }
+
+    protected get forbiddenNamesForGlobalNamespace(): string[] {
+        return keywordsv35;
     }
 
     sourceFor = (t: Type): Sourcelike => {
@@ -182,3 +186,39 @@ class PythonRenderer extends ConvenienceRenderer {
         this.forEachClass("interposing", this.emitClass);
     }
 }
+
+const keywordsv35 = [
+    "False",
+    "None",
+    "True",
+    "and",
+    "as",
+    "assert",
+    "break",
+    "class",
+    "continue",
+    "def",
+    "del",
+    "elif",
+    "else",
+    "except",
+    "finally",
+    "for",
+    "from",
+    "global",
+    "if",
+    "import",
+    "in",
+    "is",
+    "lambda",
+    "nonlocal",
+    "not",
+    "or",
+    "pass",
+    "raise",
+    "return",
+    "try",
+    "while",
+    "with",
+    "yield"
+];
