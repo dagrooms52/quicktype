@@ -24,19 +24,36 @@ import { intercalate, defined } from "../Support";
 
 import { Namer, Namespace, Name, DependencyName, SimpleName, FixedName, keywordNamespace } from "../Naming";
 
-import { Renderer, RenderResult } from "../Renderer";
+import { Renderer, RenderResult, BlankLineLocations } from "../Renderer";
 import { ConvenienceRenderer } from "../ConvenienceRenderer";
 
 import { TargetLanguage } from "../TargetLanguage";
-import { BooleanOption } from "../RendererOptions";
+import { BooleanOption, EnumOption } from "../RendererOptions";
 
 const unicode = require("unicode-properties");
+
+type PythonVersion = "2.7" | "3.4" | "3.5" | "3.6";
 
 export default class PythonTargetLanguage extends TargetLanguage {
     static declareUnionsOption = new BooleanOption("declare-unions", "Declare unions as named types", false);
 
     constructor() {
-        super("Python", ["python", "py"], "py", [PythonTargetLanguage.declareUnionsOption.definition]);
+        const twoSeven: [string, PythonVersion] = ["2.7", "2.7"];
+        const threeFour: [string, PythonVersion] = ["3.4", "3.4"];
+        const threeFive: [string, PythonVersion] = ["3.5", "3.5"];
+        const threeSix: [string, PythonVersion] = ["3.6", "3.6"];
+
+        const versionOption = new EnumOption<PythonVersion>("python-version", "Target version for Python classes", [
+            twoSeven,
+            threeFour,
+            threeFive,
+            threeSix
+        ]);
+
+        super("Python", ["python", "py"], "py", [
+            PythonTargetLanguage.declareUnionsOption.definition,
+            versionOption.definition
+        ]);
     }
 
     renderGraph(topLevels: TopLevels, optionValues: { [name: string]: any }): RenderResult {
@@ -91,18 +108,18 @@ class PythonRenderer extends ConvenienceRenderer {
         return matchType<Sourcelike>(
             t,
             anyType => "Any",
-            nullType => "Null",
-            boolType => "Bool",
+            nullType => "None",
+            boolType => "bool",
             integerType => "int",
-            doubleType => "Double",
+            doubleType => "float",
             stringType => "str",
-            arrayType => ["List<", this.sourceFor(arrayType.items), ">"],
+            arrayType => ["List[", this.sourceFor(arrayType.items), "]"],
             classType => this.nameForNamedType(classType),
-            mapType => ["Map<String, ", this.sourceFor(mapType.values), ">"],
+            mapType => ["Dict[str, ", this.sourceFor(mapType.values), "]"],
             enumType => this.nameForNamedType(enumType),
             unionType => {
                 const nullable = nullableFromUnion(unionType);
-                if (nullable) return ["Maybe<", this.sourceFor(nullable), ">"];
+                if (nullable) return ["Union[", this.sourceFor(nullable), "]"];
 
                 if (this.inlineUnions) {
                     const children = unionType.children.map((c: Type) => this.sourceFor(c));
@@ -121,7 +138,6 @@ class PythonRenderer extends ConvenienceRenderer {
                 this.emitLine(name, ": ", this.sourceFor(t));
             });
         });
-        this.emitLine();
         this.emitLine();
     };
 
@@ -143,6 +159,17 @@ class PythonRenderer extends ConvenienceRenderer {
         });
         this.emitLine("}");
     };
+
+    // Have to reverse class order because Python
+    protected forEachSpecificNamedType<T extends NamedType>(
+        blankLocations: BlankLineLocations,
+        types: OrderedSet<T>,
+        f: (t: T, name: Name) => void
+    ): void {
+        this.forEachWithBlankLines(types.reverse(), blankLocations, t => {
+            this.callForNamedType(t, f);
+        });
+    }
 
     protected emitSourceStructure() {
         this.forEachClass("interposing", this.emitClass);
