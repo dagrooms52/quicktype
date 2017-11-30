@@ -123,7 +123,7 @@ class PythonRenderer extends ConvenienceRenderer {
 
                 if (this.inlineUnions) {
                     const children = unionType.children.map((c: Type) => this.sourceFor(c));
-                    return intercalate(" | ", children).toArray();
+                    return (["Union["] as Sourcelike[]).concat(intercalate(", ", children).toArray()).concat(["]"]);
                 } else {
                     return this.nameForNamedType(unionType);
                 }
@@ -153,16 +153,17 @@ class PythonRenderer extends ConvenienceRenderer {
     };
 
     emitUnion = (u: UnionType, unionName: Name) => {
-        this.emitLine("union ", unionName, " {");
+        this.emitLine(unionName, " = Union[");
         this.indent(() => {
             this.forEach(u.members, false, false, (t: Type) => {
-                this.emitLine("case ", this.sourceFor(t));
+                this.emitLine(this.sourceFor(t), ",");
             });
         });
-        this.emitLine("}");
+        this.emitLine("]");
     };
 
-    // Have to reverse class order because Python
+    // Have to reverse class order because Python will not reference a type
+    // before it is declared
     protected forEachSpecificNamedType<T extends NamedType>(
         blankLocations: BlankLineLocations,
         types: OrderedSet<T>,
