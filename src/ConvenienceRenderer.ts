@@ -11,12 +11,11 @@ import {
     ClassType,
     EnumType,
     UnionType,
-    allNamedTypesSeparated,
-    allNamedTypes,
     separateNamedTypes,
     nullableFromUnion,
     matchType
 } from "./Type";
+import { TypeGraph } from "./TypeGraph";
 import { Namespace, Name, Namer, FixedName, SimpleName, DependencyName, keywordNamespace } from "./Naming";
 import { Renderer, BlankLineLocations } from "./Renderer";
 import { defined, assertNever, panic } from "./Support";
@@ -34,6 +33,10 @@ export abstract class ConvenienceRenderer extends Renderer {
     private _namedEnums: OrderedSet<EnumType>;
     private _namedUnions: OrderedSet<UnionType>;
     private _haveUnions: boolean;
+
+    get topLevels(): Map<string, Type> {
+        return this.typeGraph.topLevels;
+    }
 
     protected get forbiddenNamesForGlobalNamespace(): string[] {
         return [];
@@ -72,7 +75,7 @@ export abstract class ConvenienceRenderer extends Renderer {
 
     protected setUpNaming(): Namespace[] {
         this.globalNamespace = keywordNamespace("global", this.forbiddenNamesForGlobalNamespace);
-        const { classes, enums, unions } = allNamedTypesSeparated(this.topLevels);
+        const { classes, enums, unions } = this.typeGraph.allNamedTypesSeparated();
         const namedUnions = unions.filter((u: UnionType) => this.unionNeedsName(u)).toOrderedSet();
         this._namesForNamedTypes = Map();
         this._propertyNames = Map();
@@ -123,8 +126,7 @@ export abstract class ConvenienceRenderer extends Renderer {
     private addNamedForNamedType = (type: NamedType): Name => {
         const existing = this._namesForNamedTypes.get(type);
         if (existing !== undefined) return existing;
-        const name = type.combinedName;
-        const named = this.globalNamespace.add(new SimpleName(name, this.namedTypeNamer));
+        const named = this.globalNamespace.add(new SimpleName(type.proposedNames, this.namedTypeNamer));
 
         this.addDependenciesForNamedType(type, named);
 
@@ -142,7 +144,17 @@ export abstract class ConvenienceRenderer extends Renderer {
         const ns = new Namespace(c.combinedName, this.globalNamespace, Set(forbiddenNamespace), Set(forbiddenNames));
         const names = c.sortedProperties
             .map((t: Type, name: string) => {
-                return ns.add(new SimpleName(name, propertyNamer));
+                // FIXME: This alternative should really depend on what the
+                // actual name of the class ends up being.  We can do this
+                // with a DependencyName.
+                // Also, we currently don't have any languages where properties
+                // are global, so collisions here could only occur where two
+                // properties of the same class have the same name, in which case
+                // the alternative would also be the same, i.e. useless.  But
+                // maybe we'll need global properties for some weird language at
+                // some point.
+                const alternative = `${c.combinedName}_${name}`;
+                return ns.add(new SimpleName(OrderedSet([name, alternative]), propertyNamer));
             })
             .toMap();
         this._propertyNames = this._propertyNames.set(c, names);
@@ -164,7 +176,10 @@ export abstract class ConvenienceRenderer extends Renderer {
         }
         let names = Map<string, Name>();
         e.cases.forEach((name: string) => {
-            names = names.set(name, ns.add(new SimpleName(name, caseNamer)));
+            // FIXME: See the FIXME in `addPropertyNameds`.  We do have global
+            // enum cases, though (in Go), so this is actually useful already.
+            const alternative = `${e.combinedName}_${name}`;
+            names = names.set(name, ns.add(new SimpleName(OrderedSet([name, alternative]), caseNamer)));
         });
         this._caseNames = this._caseNames.set(e, names);
     };
@@ -351,7 +366,7 @@ export abstract class ConvenienceRenderer extends Renderer {
     };
 
     protected emitSource(): void {
-        const types = allNamedTypes(this.topLevels, this.childrenOfType);
+        const types = this.typeGraph.allNamedTypes(this.childrenOfType);
         this._haveUnions = types.some(t => t instanceof UnionType);
         this._namedTypes = types
             .filter((t: NamedType) => !(t instanceof UnionType) || this.unionNeedsName(t))

@@ -4,11 +4,8 @@ import * as fs from "fs";
 
 import * as _ from "lodash";
 
-import {
-  main as quicktype_,
-  Options,
-  RendererOptions
-} from "../dist/quicktype";
+import { main as quicktype_ } from "../dist/quicktype";
+import { Options, RendererOptions } from "../dist";
 import * as languages from "./languages";
 import deepEquals from "./lib/deepEquals";
 
@@ -77,21 +74,27 @@ export async function quicktypeForLanguage(
   language: languages.Language,
   sourceFile: string,
   sourceLanguage: string,
-  additionalRendererOptions: RendererOptions
+  additionalRendererOptions: RendererOptions,
+  graphqlSchema?: string
 ) {
-  await quicktype({
-    srcLang: sourceLanguage,
-    lang: language.name,
-    src: [sourceFile],
-    out: language.output,
-    topLevel: language.topLevel,
-    rendererOptions: _.merge(
-      {},
-      language.rendererOptions,
-      additionalRendererOptions
-    ),
-    quiet: true
-  });
+  try {
+    await quicktype({
+      srcLang: sourceLanguage,
+      lang: language.name,
+      src: [sourceFile],
+      out: language.output,
+      graphqlSchema,
+      topLevel: language.topLevel,
+      rendererOptions: _.merge(
+        {},
+        language.rendererOptions,
+        additionalRendererOptions
+      ),
+      quiet: true
+    });
+  } catch (e) {
+    failWith("quicktype threw an exception", { error: e });
+  }
 }
 
 export async function inDir(dir: string, work: () => Promise<void>) {

@@ -42,9 +42,17 @@ export function assertNever(x: never): never {
 }
 
 export function assert(condition: boolean, message: string = "Assertion failed"): void {
-    if (!condition) throw Error(message);
+    if (!condition) {
+        throw Error(message);
+    }
 }
 
 export function panic(message: string): never {
     throw Error(message);
+}
+
+export const hashCodeInit = 17;
+
+export function addHashCode(acc: number, h: number): number {
+    return (acc * 31 + (h | 0)) | 0;
 }

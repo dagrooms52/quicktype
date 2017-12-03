@@ -3,7 +3,6 @@
 import { List, Collection, OrderedMap, OrderedSet, Map } from "immutable";
 import {
     TypeKind,
-    TopLevels,
     Type,
     PrimitiveType,
     ArrayType,
@@ -16,6 +15,7 @@ import {
     nullableFromUnion,
     removeNullFromUnion
 } from "../Type";
+import { TypeGraph } from "../TypeGraph";
 import { Sourcelike, maybeAnnotated } from "../Source";
 import { utf16LegalizeCharacters, pascalCase, startWithLetter, utf16StringEscape } from "../Strings";
 import { intercalate, defined, assertNever, assert } from "../Support";
@@ -25,6 +25,8 @@ import { ConvenienceRenderer } from "../ConvenienceRenderer";
 import { TargetLanguage } from "../TargetLanguage";
 import { BooleanOption, StringOption, EnumOption } from "../RendererOptions";
 import { IssueAnnotationData, anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../Annotation";
+
+import * as _ from "lodash";
 
 const unicode = require("unicode-properties");
 
@@ -58,10 +60,10 @@ export default class CSharpTargetLanguage extends TargetLanguage {
         this._versionOption = versionOption;
     }
 
-    renderGraph(topLevels: TopLevels, optionValues: { [name: string]: any }): RenderResult {
+    renderGraph(graph: TypeGraph, optionValues: { [name: string]: any }): RenderResult {
         const { helpers, attributes } = this._featuresOption.getValue(optionValues);
         const renderer = new CSharpRenderer(
-            topLevels,
+            graph,
             this._listOption.getValue(optionValues),
             this._denseOption.getValue(optionValues),
             helpers,
@@ -109,7 +111,7 @@ class CSharpRenderer extends ConvenienceRenderer {
     private _enumExtensionsNames = Map<Name, Name>();
 
     constructor(
-        topLevels: TopLevels,
+        graph: TypeGraph,
         private readonly _useList: boolean,
         private readonly _dense: boolean,
         private readonly _needHelpers: boolean,
@@ -117,7 +119,7 @@ class CSharpRenderer extends ConvenienceRenderer {
         private readonly _namespaceName: string,
         private readonly _version: Version
     ) {
-        super(topLevels);
+        super(graph);
     }
 
     protected get forbiddenNamesForGlobalNamespace(): string[] {
@@ -248,7 +250,7 @@ class CSharpRenderer extends ConvenienceRenderer {
                     this.emitLine(property);
                 } else if (this._dense) {
                     const indent = maxWidth - escapedName.length + 1;
-                    const whitespace = " ".repeat(indent);
+                    const whitespace = _.repeat(" ", indent);
                     this.emitLine(attribute, whitespace, property);
                 } else {
                     this.emitLine(attribute);
