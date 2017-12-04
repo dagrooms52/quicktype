@@ -244,7 +244,8 @@ export function snakeCase(str: string): string {
 }
 
 export function upperUnderscoreCase(str: string): string {
-    const separated = str.replace(/([^A-Z])([A-Z])/g, "$1_$2");
+    let separated = str.replace(/([^A-Z])([A-Z])/g, "$1_$2");
+    separated = separated.replace(/([a-z])([0-9])/g, "$1_$2");
     const words = separated.split(wordSeparatorRegex).map(s => s.toUpperCase());
     return words.join("_");
 }

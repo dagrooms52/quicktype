@@ -79,7 +79,7 @@ function classNameStyle(original: string, uppercase: boolean): string {
 }
 
 function enumCaseNameStyle(original: string): string {
-    return startWithLetter(isStartCharacter, true, upperUnderscoreCase(legalizeName(original)));
+    return upperUnderscoreCase(startWithLetter(isStartCharacter, true, original));
 }
 
 class PythonRenderer extends ConvenienceRenderer {
