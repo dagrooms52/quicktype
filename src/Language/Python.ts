@@ -130,7 +130,7 @@ class PythonRenderer extends ConvenienceRenderer {
         );
     };
 
-    private emitClass = (c: ClassType, className: Name) => {
+    emitClass = (c: ClassType, className: Name) => {
         this.emitLine("class ", className, ":");
         this.indent(() => {
             this.forEachProperty(c, "none", (name, jsonName, t) => {
@@ -174,11 +174,7 @@ class PythonRenderer extends ConvenienceRenderer {
     }
 
     protected emitSourceStructure() {
-        this.forEachEnum("leading-and-interposing", this.emitEnum);
-        if (!this.inlineUnions) {
-            this.forEachUnion("leading-and-interposing", this.emitUnion);
-        }
-        this.forEachClass("interposing", this.emitClass);
+        this.forEachNamedType("leading-and-interposing", true, this.emitClass, this.emitEnum, this.emitUnion);
     }
 }
 
