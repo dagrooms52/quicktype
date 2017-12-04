@@ -1,11 +1,8 @@
 "use strict";
 
 import * as _ from "lodash";
-
 import { Set, List, Map, OrderedMap, OrderedSet, Collection } from "immutable";
-
 import {
-    TopLevels,
     Type,
     PrimitiveType,
     ArrayType,
@@ -21,14 +18,12 @@ import {
 import { Source, Sourcelike } from "../Source";
 import { utf16LegalizeCharacters, startWithLetter, utf16StringEscape, snakeCase, pascalCase } from "../Strings";
 import { intercalate, defined } from "../Support";
-
 import { Namer, Namespace, Name, DependencyName, SimpleName, FixedName, keywordNamespace } from "../Naming";
-
 import { Renderer, RenderResult, BlankLineLocations } from "../Renderer";
 import { ConvenienceRenderer } from "../ConvenienceRenderer";
-
 import { TargetLanguage } from "../TargetLanguage";
 import { BooleanOption, EnumOption } from "../RendererOptions";
+import { TypeGraph } from "../TypeGraph";
 
 const unicode = require("unicode-properties");
 
@@ -52,8 +47,8 @@ export default class PythonTargetLanguage extends TargetLanguage {
         ]);
     }
 
-    renderGraph(topLevels: TopLevels, optionValues: { [name: string]: any }): RenderResult {
-        return new PythonRenderer(topLevels, !PythonTargetLanguage.declareUnionsOption.getValue(optionValues)).render();
+    renderGraph(typeGraph: TypeGraph, optionValues: { [name: string]: any }): RenderResult {
+        return new PythonRenderer(typeGraph, !PythonTargetLanguage.declareUnionsOption.getValue(optionValues)).render();
     }
 }
 
@@ -77,8 +72,8 @@ function classNameStyle(original: string, uppercase: boolean): string {
 }
 
 class PythonRenderer extends ConvenienceRenderer {
-    constructor(topLevels: TopLevels, private readonly inlineUnions: boolean) {
-        super(topLevels);
+    constructor(typeGraph: TypeGraph, private readonly inlineUnions: boolean) {
+        super(typeGraph);
     }
 
     protected topLevelNameStyle(rawName: string): string {
