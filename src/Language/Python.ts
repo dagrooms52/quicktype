@@ -16,7 +16,14 @@ import {
     matchType
 } from "../Type";
 import { Source, Sourcelike } from "../Source";
-import { utf16LegalizeCharacters, startWithLetter, utf16StringEscape, snakeCase, pascalCase } from "../Strings";
+import {
+    utf16LegalizeCharacters,
+    startWithLetter,
+    utf16StringEscape,
+    snakeCase,
+    pascalCase,
+    upperUnderscoreCase
+} from "../Strings";
 import { intercalate, defined } from "../Support";
 import { Namer, Namespace, Name, DependencyName, SimpleName, FixedName, keywordNamespace } from "../Naming";
 import { Renderer, RenderResult, BlankLineLocations } from "../Renderer";
@@ -71,6 +78,10 @@ function classNameStyle(original: string, uppercase: boolean): string {
     return startWithLetter(isStartCharacter, uppercase, pascalCase(legalizeName(original)));
 }
 
+function enumCaseNameStyle(original: string): string {
+    return startWithLetter(isStartCharacter, true, upperUnderscoreCase(legalizeName(original)));
+}
+
 class PythonRenderer extends ConvenienceRenderer {
     constructor(typeGraph: TypeGraph, private readonly inlineUnions: boolean) {
         super(typeGraph);
@@ -89,7 +100,7 @@ class PythonRenderer extends ConvenienceRenderer {
     }
 
     protected get caseNamer(): Namer {
-        return new Namer(n => classNameStyle(n, true), []);
+        return new Namer(n => enumCaseNameStyle(n), []);
     }
 
     protected namedTypeToNameForTopLevel(type: Type): NamedType | null {
