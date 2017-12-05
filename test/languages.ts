@@ -179,3 +179,20 @@ export const TypeScriptLanguage: Language = {
   rendererOptions: { "runtime-typecheck": "yes", "explicit-unions": "yes" },
   quickTestRendererOptions: []
 };
+
+export const PythonLanguage: Language = {
+  name: "python",
+  base: "test/fixtures/typescript",
+  runCommand(sample: string): string {
+    // TODO: Do
+    return "";
+  },
+  diffViaSchema: false,
+  allowMissingNull: false,
+  output: "top_level.py",
+  topLevel: "TopLevel",
+  skipJSON: [],
+  skipSchema: [],
+  rendererOptions: { "runtime-typecheck": "yes", "explicit-unions": "yes" },
+  quickTestRendererOptions: []
+};

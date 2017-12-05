@@ -4,9 +4,6 @@ import * as _ from "lodash";
 import * as path from "path";
 import * as fs from "fs";
 import { randomBytes } from "crypto";
-
-const Ajv = require("ajv");
-
 import {
   compareJsonFileToJson,
   debug,
@@ -23,7 +20,7 @@ import {
 import * as languages from "./languages";
 import { RendererOptions } from "../dist";
 import { panic } from "../dist/Support";
-
+const Ajv = require("ajv");
 const chalk = require("chalk");
 const shell = require("shelljs");
 
@@ -529,6 +526,7 @@ export const allFixtures: Fixture[] = [
   new JSONFixture(languages.ElmLanguage),
   new JSONFixture(languages.SwiftLanguage),
   new JSONFixture(languages.TypeScriptLanguage),
+  new JSONFixture(languages.PythonLanguage),
   new JSONSchemaJSONFixture(languages.CSharpLanguage),
   new JSONSchemaFixture(languages.CSharpLanguage),
   new JSONSchemaFixture(languages.JavaLanguage),
@@ -536,10 +534,12 @@ export const allFixtures: Fixture[] = [
   new JSONSchemaFixture(languages.CPlusPlusIndirectionLanguage),
   new JSONSchemaFixture(languages.SwiftClassesLanguage),
   new JSONSchemaFixture(languages.TypeScriptLanguage),
+  new JSONSchemaFixture(languages.PythonLanguage),
   new GraphQLFixture(languages.CSharpLanguage),
   new GraphQLFixture(languages.JavaLanguage),
   new GraphQLFixture(languages.GoLanguage),
   new GraphQLFixture(languages.CPlusPlusIndirectionLanguage),
-  new GraphQLFixture(languages.SwiftClassesLanguage)
+  new GraphQLFixture(languages.SwiftClassesLanguage),
+  new GraphQLFixture(languages.PythonLanguage)
   // new GraphQLFixture(languages.TypeScriptLanguage) // enable once we have enums in TS
 ];
